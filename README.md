@@ -162,4 +162,4 @@ This project demonstrates the full customer intelligence loop:
 
 ---
 
-nly. No real user data was collected or stored.*
+*This project uses simulated data only. No real user data was collected or stored*
