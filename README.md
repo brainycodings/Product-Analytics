@@ -91,6 +91,8 @@ Funnel: `session_started` → `feature_used` → `invite_sent`
 - Segmentation: session count broken down by plan (free/starter/pro/enterprise)
 - Retention analysis: user return rate over time
 
+![Mixpanel_funnel overview](screenshots/funnel_mixpanel.png)
+
 ### Module 3 — Cross-system Pipeline (n8n)
 - Runs at 03:00am
 - Fetches churning users from Mixpanel `/engage` API
@@ -108,16 +110,8 @@ Funnel: `session_started` → `feature_used` → `invite_sent`
 
 ## Sample Reconciliation Report
 
-```
-🔍 Rapport cohérence hebdo Mixpanel ↔ HubSpot
+![slack_alert overview](screenshots/workflowPA_slack.png)
 
-✅ Users actifs Mixpanel : 139
-🔴 Contacts churn_risk HubSpot : 62
-⚠️ Incohérences détectées : 1
-
-Contacts à corriger :
-emma.simon195@example.com
-```
 
 ---
 
