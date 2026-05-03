@@ -1,0 +1,223 @@
+{
+  "name": "2 - Product Analytics Automation Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9ddf58a6-81af-48b2-a4bd-74d09a534533",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://eu.mixpanel.com/api/query/engage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic [MDA5NjRlNmJiMTBkZTk2YTI2ZDk5MDFkMWIzNWQ0MTU6]"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "where",
+              "value": "properties[\"is_churning\"] == false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1dae0977-195f-4a4e-84a1-5a01a0acf73d",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "HlHDc95b1slM7dRS",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-eu1.hubapi.com/crm/v3/objects/contacts/search",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"filterGroups\": [{\n    \"filters\": [{\n      \"propertyName\": \"churn_segment\",\n      \"operator\": \"EQ\",\n      \"value\": \"churn_risk_mixpanel\"\n    }]\n  }],\n  \"properties\": [\"email\", \"churn_segment\", \"engagement_score\"],\n  \"limit\": 200\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        112
+      ],
+      "id": "8b6ff5ab-6227-4977-b571-9c2f289c6214",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mixpanelData = items.find(i => i.json.results?.[0]?.$distinct_id !== undefined);\nconst hubspotData = items.find(i => i.json.results?.[0]?.properties !== undefined);\n\nconst mixpanelResults = mixpanelData?.json.results || [];\nconst hubspotResults = hubspotData?.json.results.filter(c => \n  c.properties?.churn_segment === 'churn_risk_mixpanel'\n) || [];\n\nconst activeEmails = new Set(\n  mixpanelResults\n    .map(u => u.$properties?.$email?.toLowerCase().trim())\n    .filter(Boolean)\n);\n\nconst inconsistencies = hubspotResults.filter(contact => {\n  const email = contact.properties?.email?.toLowerCase().trim();\n  return email && activeEmails.has(email);\n});\n\nreturn [{json: {\n  total_active_mixpanel: activeEmails.size,\n  total_churn_hubspot: hubspotResults.length,\n  inconsistencies_count: inconsistencies.length,\n  inconsistent_contacts: inconsistencies.map(c => c.properties?.email),\n  // Debug — 3 premiers emails de chaque source\n  sample_mixpanel_emails: [...activeEmails].slice(0, 3),\n  sample_hubspot_emails: hubspotResults.slice(0, 3).map(c => c.properties?.email)\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "61f3a623-76c4-4b80-9863-9587e33bdf0c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        704,
+        0
+      ],
+      "id": "36013a6f-4808-4039-844a-d056c22bbd4f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B10KZ9084",
+          "mode": "list",
+          "cachedResultName": "churn-risk"
+        },
+        "text": "=🔍 *Rapport cohérence hebdo Mixpanel / HubSpot* \n+ ✅ Users actifs Mixpanel :  {{ $json.total_active_mixpanel }}  \n+ 🔴 Contacts churn_risk HubSpot : {{ $json.total_churn_hubspot }} \n+ ⚠️ Incohérences détectées :  {{ $json.inconsistencies_count }} \n+ Contacts à corriger :{{ $json.inconsistent_contacts[0] }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "5e75c5fc-4825-40ba-8432-9e0edd627711",
+      "name": "Send a message",
+      "webhookId": "45c93a0d-529a-42b6-a594-ddf4a015f0f8",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "fmrKPGN92FfNthA3",
+          "name": "Slack OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f70b5155-ce29-48b1-a9e7-2aaa2e2e2de9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b331327c218194f5904ebd0ba553f68b4c713af4f2b579b2eedb2ad6379ee765"
+  },
+  "id": "r4PwtfLDSeONmviW",
+  "tags": []
+}
