@@ -91,6 +91,8 @@ Funnel: `session_started` → `feature_used` → `invite_sent`
 - Segmentation: session count broken down by plan (free/starter/pro/enterprise)
 - Retention analysis: user return rate over time
 
+![Mixpanel_funnel overview](screenshots/mixpanel_segmentation.png)
+
 ![Mixpanel_funnel overview](screenshots/funnel_mixpanel.png)
 
 ### Module 3 — Cross-system Pipeline (n8n)
@@ -126,10 +128,9 @@ Funnel: `session_started` → `feature_used` → `invite_sent`
 │   ├── module3_mixpanel_to_hubspot.json
 │   └── module4_reconciliation.json
 └── screenshots/
-    ├── mixpanel_funnel.png
+    ├── funnel_mixpanel.png
     ├── mixpanel_segmentation.png
-    ├── module3_slack_alert.png
-    └── module4_reconciliation_report.png
+    └── workflowPA_slack.png
 ```
 
 ---
